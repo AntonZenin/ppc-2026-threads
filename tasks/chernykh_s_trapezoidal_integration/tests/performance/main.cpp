@@ -1,48 +1,61 @@
 #include <gtest/gtest.h>
+#include <vector>
+#include <cmath>
+#include <functional>
 
-#include "example_threads/all/include/ops_all.hpp"
-#include "example_threads/common/include/common.hpp"
-#include "example_threads/omp/include/ops_omp.hpp"
-#include "example_threads/seq/include/ops_seq.hpp"
-#include "example_threads/stl/include/ops_stl.hpp"
-#include "example_threads/tbb/include/ops_tbb.hpp"
+#include "chernykh_s_trapezoidal_integration/common/include/common.hpp"
+#include "chernykh_s_trapezoidal_integration/seq/include/ops_seq.hpp"
 #include "util/include/perf_test_util.hpp"
 
 namespace chernykh_s_trapezoidal_integration {
 
-class ExampleRunPerfTestThreads : public ppc::util::BaseRunPerfTests<InType, OutType> {
-  const int kCount_ = 200;
-  InType input_data_{};
 
-  void SetUp() override {
-    input_data_ = kCount_;
-  }
   
+class ChernykhSRunPerfTestThreads : public ppc::util::BaseRunPerfTests<InType, OutType> {
+ protected:
+  void SetUp() override {
+    limits_ = {{0.0, 1.0}, {0.0, 1.0}, {0.0, 1.0}};
+    steps_ = {400, 400, 400};
+    
+    auto f = [](const std::vector<double>& x) -> double {
+        return std::sin(x[0]) * std::cos(x[1]) * std::exp(x[2]);
+    };
+
+    input_data_ = InType(limits_, steps_, f);
+
+    reference_value_ = (1.0 - std::cos(1.0)) * std::sin(1.0) * (std::exp(1.0) - 1.0);
+  }
 
   bool CheckTestOutputData(OutType &output_data) final {
-    return input_data_ == output_data;
+    return std::abs(reference_value_ - output_data) < 1e-1;
   }
 
   InType GetTestInputData() final {
     return input_data_;
   }
+
+private:
+  std::vector<std::pair<double, double>> limits_;
+  std::vector<int> steps_;
+  InType input_data_{{}, {}, nullptr};
+  OutType reference_value_ = 0.0;
 };
 
-TEST_P(ExampleRunPerfTestThreads, RunPerfModes) {
+TEST_P(ChernykhSRunPerfTestThreads, RunPerfModes) {
   ExecuteTest(GetParam());
 }
 
 namespace {
 
-const auto kAllPerfTasks =
-    ppc::util::MakeAllPerfTasks<InType, ChernykhSTestTaskALL, ChernykhSTestTaskOMP, ChernykhSTrapezoidalIntegrationSEQ,
-                                ChernykhSTestTaskSTL, ChernykhSTestTaskTBB>(PPC_SETTINGS_example_threads);
+const auto kAllPerfTasks = ppc::util::MakeAllPerfTasks<InType, 
+    ChernykhSTrapezoidalIntegrationSEQ
+    >(PPC_SETTINGS_example_threads);
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 
-const auto kPerfTestName = ExampleRunPerfTestThreads::CustomPerfTestName;
+const auto kPerfTestName = ChernykhSRunPerfTestThreads::CustomPerfTestName;
 
-INSTANTIATE_TEST_SUITE_P(RunModeTests, ExampleRunPerfTestThreads, kGtestValues, kPerfTestName);
+INSTANTIATE_TEST_SUITE_P(IntegrationPerfTests, ChernykhSRunPerfTestThreads, kGtestValues, kPerfTestName);
 
 }  // namespace
 

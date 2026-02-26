@@ -1,23 +1,26 @@
 #pragma once
-
-#include "example_threads/common/include/common.hpp"
+#include <vector>
+#include <functional>
+#include <utility>
 #include "task/include/task.hpp"
-
+#include "chernykh_s_trapezoidal_integration/common/include/common.hpp"
 namespace chernykh_s_trapezoidal_integration {
+
+
 
 class ChernykhSTrapezoidalIntegrationSEQ : public BaseTask {
  public:
   static constexpr ppc::task::TypeOfTask GetStaticTypeOfTask() {
     return ppc::task::TypeOfTask::kSEQ;
   }
-  explicit ChernykhSTrapezoidalIntegrationSEQ(const InType &in);
+explicit ChernykhSTrapezoidalIntegrationSEQ(const InType &in);
 
  private:
-  void RecoursiveMethod(size_t dim, std::vector<double>& current_point, double current_coeff,const InType& input, double &total_sum);
+  void RecursiveMethod(size_t dim, std::vector<double>& current_point, double current_coeff,const IntegrationInType& input, double &total_sum);
   // size_t dim - индекс оси, по какой мы идем
   // std::vector<double>& current_point - сюда записываем вычисленные координаты
   // double current_coeff - вес для текущей точки
-  // const InType& Input - входные данные
+  // const IntegrationInType& Input - входные данные 
   // double& total_sum - копилка сумм
 
   bool ValidationImpl() override;

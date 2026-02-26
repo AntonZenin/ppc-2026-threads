@@ -1,24 +1,23 @@
-#include "example_threads/seq/include/ops_seq.hpp"
-
+#include "chernykh_s_trapezoidal_integration/seq/include/ops_seq.hpp"
 #include <numeric>
 #include <vector>
-
-#include "example_threads/common/include/common.hpp"
 #include "util/include/util.hpp"
+
+#include "chernykh_s_trapezoidal_integration/common/include/common.hpp"
 
 namespace chernykh_s_trapezoidal_integration {
 
 ChernykhSTrapezoidalIntegrationSEQ::ChernykhSTrapezoidalIntegrationSEQ(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
-  GetOutput() = 0;
+  GetOutput() = 0.0;
 }
 
-void ChernykhSTrapezoidalIntegrationSEQ::RecoursiveMethod(size_t dim, std::vector<double>& current_point, double current_coeff,const InType& input, double &total_sum) {
+void ChernykhSTrapezoidalIntegrationSEQ::RecursiveMethod(size_t dim, std::vector<double>& current_point, double current_coeff,const IntegrationInType& input, double &total_sum) {
   // size_t dims - индекс оси, по какой мы идем
   // std::vector<double>& current_point - сюда записываем вычисленные координаты
   // double current_coeff - вес для текущей точки
-  // const InType& Input - входные данные
+  // const IntegrationInType& Input - входные данные
   // double& total_sum - копилка сумм
   if(dim == input.limits.size()){
     total_sum+=input.func(current_point)*current_coeff;
@@ -29,19 +28,17 @@ void ChernykhSTrapezoidalIntegrationSEQ::RecoursiveMethod(size_t dim, std::vecto
   size_t n = input.steps[dim]; // количество разбиений на этой оси
   double h = (b-a)/n; // длина текущего шага
 
-  for (int i = 0; i<=n;i++){
+  for (size_t i = 0; i<=n;i++){
     current_point[dim] = a + i*h; 
-    double local_coeff = (i==0 || i==n) ? 0.5 : 1.0;
-    RecoursiveMethod(dim+1, current_point, local_coeff*current_coeff, input, total_sum);
+    double local_coeff = (i == 0 || i == n) ? 0.5 : 1.0;
+    RecursiveMethod(dim+1, current_point, local_coeff*current_coeff, input, total_sum);
   }
 
 
 }
 
-
-
 bool ChernykhSTrapezoidalIntegrationSEQ::ValidationImpl() {
-  const auto &input = GetInput();
+  const auto &input = this->GetInput();
 
   if(input.limits.empty()){
     return false;
@@ -65,7 +62,7 @@ bool ChernykhSTrapezoidalIntegrationSEQ::PreProcessingImpl() {
 }
 
 bool ChernykhSTrapezoidalIntegrationSEQ::RunImpl() {
-  const auto& input = GetInput();
+  const auto& input = this->GetInput();
   size_t dims = input.limits.size();
   std::vector<double> current_point(dims); 
   double total_sum = 0.0;
