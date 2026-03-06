@@ -14,7 +14,7 @@
 
 namespace zenin_a_radix_sort_double_batcher_merge_omp {
 
-class ZeninARadixSortDoubleBatcherMergePerfTestsThreads : public ppc::util::BaseRunPerfTests<InType, OutType> {
+class ZeninARadixSortDoubleBatcherMergePerfTestsThreadsOMP : public ppc::util::BaseRunPerfTests<InType, OutType> {
   const int kCount_ = 1000000;
   InType input_data_;
 
@@ -48,7 +48,7 @@ class ZeninARadixSortDoubleBatcherMergePerfTestsThreads : public ppc::util::Base
   }
 };
 
-TEST_P(ZeninARadixSortDoubleBatcherMergePerfTestsThreads, RunPerfModes) {
+TEST_P(ZeninARadixSortDoubleBatcherMergePerfTestsThreadsOMP, RunPerfModes) {
   ExecuteTest(GetParam());
 }
 
@@ -59,9 +59,10 @@ const auto kAllPerfTasks = ppc::util::MakeAllPerfTasks<InType, ZeninARadixSortDo
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 
-const auto kPerfTestName = ZeninARadixSortDoubleBatcherMergePerfTestsThreads::CustomPerfTestName;
+const auto kPerfTestName = ZeninARadixSortDoubleBatcherMergePerfTestsThreadsOMP::CustomPerfTestName;
 
-INSTANTIATE_TEST_SUITE_P(RunModeTests, ZeninARadixSortDoubleBatcherMergePerfTestsThreads, kGtestValues, kPerfTestName);
+INSTANTIATE_TEST_SUITE_P(RunModeTests, ZeninARadixSortDoubleBatcherMergePerfTestsThreadsOMP, kGtestValues,
+                         kPerfTestName);
 
 }  // namespace
 

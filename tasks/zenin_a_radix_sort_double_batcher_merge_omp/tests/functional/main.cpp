@@ -22,7 +22,7 @@
 
 namespace zenin_a_radix_sort_double_batcher_merge_omp {
 
-class ZeninARadixSortDoubleBatcherMergeFuncTestsThreads
+class ZeninARadixSortDoubleBatcherMergeFuncTestsThreadsOMP
     : public ppc::util::BaseRunFuncTests<InType, OutType, TestType> {
  public:
   static std::string PrintTestParam(const TestType &test_param) {
@@ -59,7 +59,7 @@ class ZeninARadixSortDoubleBatcherMergeFuncTestsThreads
 
 namespace {
 
-TEST_P(ZeninARadixSortDoubleBatcherMergeFuncTestsThreads, MatmulFromPic) {
+TEST_P(ZeninARadixSortDoubleBatcherMergeFuncTestsThreadsOMP, MatmulFromPic) {
   ExecuteTest(GetParam());
 }
 
@@ -83,10 +83,10 @@ const auto kTestTasksList = std::tuple_cat(ppc::util::AddFuncTask<ZeninARadixSor
 
 const auto kGtestValues = ppc::util::ExpandToValues(kTestTasksList);
 
-const auto kPerfTestName = ZeninARadixSortDoubleBatcherMergeFuncTestsThreads::PrintFuncTestName<
-    ZeninARadixSortDoubleBatcherMergeFuncTestsThreads>;
+const auto kPerfTestName = ZeninARadixSortDoubleBatcherMergeFuncTestsThreadsOMP::PrintFuncTestName<
+    ZeninARadixSortDoubleBatcherMergeFuncTestsThreadsOMP>;
 
-INSTANTIATE_TEST_SUITE_P(PicMatrixTests, ZeninARadixSortDoubleBatcherMergeFuncTestsThreads, kGtestValues,
+INSTANTIATE_TEST_SUITE_P(PicMatrixTests, ZeninARadixSortDoubleBatcherMergeFuncTestsThreadsOMP, kGtestValues,
                          kPerfTestName);
 
 }  // namespace
