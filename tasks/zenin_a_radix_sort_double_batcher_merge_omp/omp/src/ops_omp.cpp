@@ -1,7 +1,9 @@
 #include "zenin_a_radix_sort_double_batcher_merge_omp/omp/include/ops_omp.hpp"
 
-#include <atomic>
-#include <numeric>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <utility>
 #include <vector>
 
 #include "util/include/util.hpp"
@@ -129,7 +131,6 @@ bool ZeninARadixSortDoubleBatcherMergeOMP::RunImpl() {
 
   int num_threads = std::min(ppc::util::GetNumThreads(), n);
 
-  // Делим на части и сортируем параллельно
   std::vector<std::vector<double>> parts(num_threads);
 
 #pragma omp parallel default(none) shared(data, parts, n, num_threads) num_threads(num_threads)
@@ -143,16 +144,17 @@ bool ZeninARadixSortDoubleBatcherMergeOMP::RunImpl() {
     LSDRadixSort(parts[tid]);
   }
 
-  // Сливаем части последовательно через Бэтчера
   std::vector<double> result;
   result.reserve(n);
   for (auto &part : parts) {
     result.insert(result.end(), part.begin(), part.end());
   }
 
-  // Паддинг до степени двойки
   int padded_n = 1;
-  while (padded_n < (int)result.size()) {
+  /*while (padded_n < (int)result.size()) {
+    padded_n <<= 1;
+  }*/
+  while (padded_n < n || padded_n < num_threads) {
     padded_n <<= 1;
   }
   result.resize(padded_n, std::numeric_limits<double>::max());
