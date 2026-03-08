@@ -12,18 +12,26 @@ namespace titaev_m_sortirovka_betchera {
 namespace {
 
 uint64_t DoubleToOrderedUint(double value) {
-  uint64_t x = 0;
+  uint64_t x;
   std::memcpy(&x, &value, sizeof(double));
-  auto sx = static_cast<int64_t>(x);
-  uint64_t mask = (static_cast<uint64_t>(sx >> 63) & 0x7FFFFFFFFFFFFFFFULL);
-  return x ^ mask;
+
+  if (x & (1ULL << 63)) {
+    x = ~x;  // отрицательные
+  } else {
+    x ^= (1ULL << 63);  // положительные
+  }
+
+  return x;
 }
 
 double OrderedUintToDouble(uint64_t x) {
-  auto sx = static_cast<int64_t>(x);
-  uint64_t mask = (static_cast<uint64_t>((sx >> 63) - 1) & 0x7FFFFFFFFFFFFFFFULL);
-  x ^= mask;
-  double result = 0;
+  if (x & (1ULL << 63)) {
+    x ^= (1ULL << 63);
+  } else {
+    x = ~x;
+  }
+
+  double result;
   std::memcpy(&result, &x, sizeof(double));
   return result;
 }
