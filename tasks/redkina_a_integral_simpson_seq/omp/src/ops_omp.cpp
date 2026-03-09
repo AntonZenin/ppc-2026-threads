@@ -8,106 +8,24 @@
 #include <vector>
 
 #include "redkina_a_integral_simpson_seq/common/include/common.hpp"
-#include "util/include/util.hpp"
 
 namespace redkina_a_integral_simpson_seq {
 
 namespace {
 
-// Однократная инициализация пула потоков OpenMP
-static void InitializeOpenMP() {
-  static bool initialized = false;
-  if (!initialized) {
-#pragma omp parallel
-    {
-      // Пустая параллельная область для создания пула потоков
-    }
-    initialized = true;
-  }
-}
-
-int GetSimpsonWeight(int idx, int max_idx) {
-  if (idx == 0 || idx == max_idx) {
+inline int GetWeight(int idx, int n) {
+  if (idx == 0 || idx == n) {
     return 1;
-  }
-  if (idx % 2 == 1) {
+  } else if (idx % 2 == 1) {
     return 4;
+  } else {
+    return 2;
   }
-  return 2;
-}
-
-bool AdvanceIndices(std::vector<int> &indices, const std::vector<int> &n) {
-  int dim = static_cast<int>(indices.size());
-  int pos = dim - 1;
-  while (pos >= 0 && indices[pos] == n[pos]) {
-    indices[pos] = 0;
-    --pos;
-  }
-  if (pos < 0) {
-    return false;
-  }
-  ++indices[pos];
-  return true;
-}
-
-double TraverseRemainingDimensions(const std::vector<double> &sub_a, const std::vector<double> &sub_h,
-                                   const std::vector<int> &sub_n, double w_first,
-                                   const std::function<double(const std::vector<double> &)> &func,
-                                   std::vector<double> &point, size_t sub_dim) {
-  if (sub_dim == 0) {
-    return 0.0;
-  }
-  double sum = 0.0;
-  std::vector<int> indices(sub_dim, 0);
-  bool has_next = true;
-  while (has_next) {
-    double w_prod = w_first;
-    for (size_t i = 0; i < sub_dim; ++i) {
-      int idx = indices[i];
-      point[i + 1] = sub_a[i] + (static_cast<double>(idx) * sub_h[i]);
-      int w = GetSimpsonWeight(idx, sub_n[i]);
-      w_prod *= static_cast<double>(w);
-    }
-    sum += w_prod * func(point);
-    has_next = AdvanceIndices(indices, sub_n);
-  }
-  return sum;
-}
-
-double ProcessSubspace(const std::vector<double> &a, const std::vector<double> &h, const std::vector<int> &n,
-                       int first_index, const std::function<double(const std::vector<double> &)> &func, size_t dim) {
-  if (dim == 0) {
-    return 0.0;
-  }
-  std::vector<double> point(dim);
-  point[0] = a[0] + (static_cast<double>(first_index) * h[0]);
-
-  int w_first = GetSimpsonWeight(first_index, n[0]);
-
-  if (dim == 1) {
-    return static_cast<double>(w_first) * func(point);
-  }
-
-  size_t sub_dim = dim - 1;
-  std::vector<int> sub_n(sub_dim);
-  std::vector<double> sub_h(sub_dim);
-  std::vector<double> sub_a(sub_dim);
-
-  for (size_t dim_idx = 1; dim_idx < dim; ++dim_idx) {
-    sub_n[dim_idx - 1] = n[dim_idx];
-    sub_h[dim_idx - 1] = h[dim_idx];
-    sub_a[dim_idx - 1] = a[dim_idx];
-  }
-
-  double sub_sum = TraverseRemainingDimensions(sub_a, sub_h, sub_n, static_cast<double>(w_first), func, point, sub_dim);
-  return sub_sum;
 }
 
 }  // namespace
 
 RedkinaAIntegralSimpsonOMP::RedkinaAIntegralSimpsonOMP(const InType &in) {
-  // Инициализируем OpenMP при создании первой задачи
-  InitializeOpenMP();
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
 }
@@ -155,21 +73,43 @@ bool RedkinaAIntegralSimpsonOMP::RunImpl() {
     h_prod *= h[i];
   }
 
-  double total_sum = 0.0;
-  int n0 = n_[0];
+  size_t total_nodes = 1;
+  for (size_t i = 0; i < dim; ++i) {
+    total_nodes *= static_cast<size_t>(n_[i] + 1);
+  }
 
-  // Локальные копии для использования в OpenMP (избегаем работы с членами класса)
-  const auto a_local = a_;
-  const auto h_local = h;
-  const auto n_local = n_;
-  const auto &func_local = func_;
-  const size_t dim_local = dim;
-  const int n0_local = n0;
+  std::vector<size_t> strides(dim);
+  strides[dim - 1] = 1;
+  for (int i = static_cast<int>(dim) - 2; i >= 0; --i) {
+    strides[i] = strides[i + 1] * static_cast<size_t>(n_[i + 1] + 1);
+  }
 
-#pragma omp parallel for reduction(+ : total_sum) default(none) \
-    shared(a_local, h_local, n_local, func_local, dim_local, n0_local)
-  for (int i0 = 0; i0 <= n0_local; ++i0) {
-    total_sum += ProcessSubspace(a_local, h_local, n_local, i0, func_local, dim_local);
+  double sum = 0.0;
+
+#pragma omp parallel
+  {
+    std::vector<int> indices(dim);
+    std::vector<double> point(dim);
+
+#pragma omp for reduction(+ : sum)
+    for (size_t linear_idx = 0; linear_idx < total_nodes; ++linear_idx) {
+      size_t remainder = linear_idx;
+      for (size_t i = 0; i < dim; ++i) {
+        indices[i] = static_cast<int>(remainder / strides[i]);
+        remainder %= strides[i];
+      }
+
+      double w_prod = 1.0;
+      for (size_t i = 0; i < dim; ++i) {
+        w_prod *= static_cast<double>(GetWeight(indices[i], n_[i]));
+      }
+
+      for (size_t i = 0; i < dim; ++i) {
+        point[i] = a_[i] + static_cast<double>(indices[i]) * h[i];
+      }
+
+      sum += w_prod * func_(point);
+    }
   }
 
   double denominator = 1.0;
@@ -177,7 +117,7 @@ bool RedkinaAIntegralSimpsonOMP::RunImpl() {
     denominator *= 3.0;
   }
 
-  result_ = (h_prod / denominator) * total_sum;
+  result_ = (h_prod / denominator) * sum;
   return true;
 }
 
