@@ -11,29 +11,29 @@
 namespace ilin_a_algorithm_graham {
 
 namespace {
-double Orient(const Point& p, const Point& q, const Point& r) {
+double Orient(const Point &p, const Point &q, const Point &r) {
   return ((q.x - p.x) * (r.y - p.y)) - ((q.y - p.y) * (r.x - p.x));
 }
 
-double DistanceSq(const Point& p, const Point& q) {
+double DistanceSq(const Point &p, const Point &q) {
   double dx = p.x - q.x;
   double dy = p.y - q.y;
   return (dx * dx) + (dy * dy);
 }
 
-Point FindLowestLeftmost(const std::vector<Point>& points) {
+Point FindLowestLeftmost(const std::vector<Point> &points) {
   Point p0 = points[0];
-  
-  #pragma omp parallel
+
+#pragma omp parallel
   {
     Point local_p0 = p0;
-    #pragma omp for nowait
+#pragma omp for nowait
     for (int i = 1; i < static_cast<int>(points.size()); ++i) {
       if (points[i].y < local_p0.y || (points[i].y == local_p0.y && points[i].x < local_p0.x)) {
         local_p0 = points[i];
       }
     }
-    #pragma omp critical
+#pragma omp critical
     {
       if (local_p0.y < p0.y || (local_p0.y == p0.y && local_p0.x < p0.x)) {
         p0 = local_p0;
@@ -45,11 +45,13 @@ Point FindLowestLeftmost(const std::vector<Point>& points) {
 
 class PointComparator {
  public:
-  explicit PointComparator(const Point& p0) : p0_(p0) {}
-  
-  bool operator()(const Point& a, const Point& b) const {
+  explicit PointComparator(const Point &p0) : p0_(p0) {}
+
+  bool operator()(const Point &a, const Point &b) const {
     double o = Orient(p0_, a, b);
-    if (o != 0.0) return o > 0;
+    if (o != 0.0) {
+      return o > 0;
+    }
     return DistanceSq(p0_, a) < DistanceSq(p0_, b);
   }
 
@@ -80,15 +82,15 @@ bool IlinAGrahamOMP::RunImpl() {
   }
 
   Point p0 = FindLowestLeftmost(points_);
-  
+
   std::vector<Point> sorted;
   sorted.reserve(points_.size());
-  for (const Point& p : points_) {
+  for (const Point &p : points_) {
     if (p.x != p0.x || p.y != p0.y) {
       sorted.push_back(p);
     }
   }
-  
+
   std::sort(sorted.begin(), sorted.end(), PointComparator(p0));
 
   std::vector<Point> stack;
