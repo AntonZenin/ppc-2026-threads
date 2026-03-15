@@ -41,7 +41,7 @@ bool VasilievMShellSortBatcherMergeOMP::RunImpl() {
 
   std::vector<ValType> buffer(n);
   for (size_t size = 1; size < chunk_count; size *= 2) {
-    BatcherMerge(vec, buffer, bounds, size);
+    CycleMerge(vec, buffer, bounds, size);
     vec.swap(buffer);
   }
 
@@ -97,27 +97,98 @@ void VasilievMShellSortBatcherMergeOMP::ShellSort(std::vector<ValType> &vec, std
   }
 }
 
-void VasilievMShellSortBatcherMergeOMP::BatcherMerge(std::vector<ValType> &vec, std::vector<ValType> &buffer,
-                                                     std::vector<size_t> &bounds, size_t size) {
-  size_t chunk_count = bounds.size() - 1;
+void VasilievMShellSortBatcherMergeOMP::CycleMerge(std::vector<ValType> &vec, std::vector<ValType> &buffer,
+                                                   std::vector<size_t> &bounds, size_t size) {
+  const size_t chunk_count = bounds.size() - 1;
 
 #pragma omp parallel for default(none) shared(vec, buffer, bounds, size, chunk_count) schedule(static)
   for (size_t l_chunk = 0; l_chunk < chunk_count; l_chunk += (2 * size)) {
-    size_t l = l_chunk;
-    size_t mid = std::min(l + size, chunk_count);
-    size_t r = std::min(l + (2 * size), chunk_count);
+    const size_t l = l_chunk;
+    const size_t mid = std::min(l + size, chunk_count);
+    const size_t r = std::min(l + (2 * size), chunk_count);
 
-    size_t start = bounds[l];
-    size_t middle = bounds[mid];
-    size_t end = bounds[r];
-    auto out = buffer.begin() + start;
+    const size_t start = bounds[l];
+    const size_t middle = bounds[mid];
+    const size_t end = bounds[r];
 
     if (mid == r) {
-      std::copy(vec.begin() + start, vec.begin() + end, out);
+      std::copy(vec.begin() + start, vec.begin() + end, buffer.begin() + start);
     } else {
-      std::merge(vec.begin() + start, vec.begin() + middle, vec.begin() + middle, vec.begin() + end, out);
+      std::vector<ValType> l(vec.begin() + start, vec.begin() + middle);
+      std::vector<ValType> r(vec.begin() + middle, vec.begin() + end);
+
+      std::vector<ValType> merged = BatcherMerge(l, r);
+      std::copy(merged.begin(), merged.end(), buffer.begin() + start);
     }
   }
+}
+
+std::vector<ValType> VasilievMShellSortBatcherMergeOMP::BatcherMerge(std::vector<ValType> &l, std::vector<ValType> &r) {
+  std::vector<ValType> even_l;
+  std::vector<ValType> odd_l;
+  std::vector<ValType> even_r;
+  std::vector<ValType> odd_r;
+
+  SplitEvenOdd(l, even_l, odd_l);
+  SplitEvenOdd(r, even_r, odd_r);
+
+  std::vector<ValType> even = Merge(even_l, even_r);
+  std::vector<ValType> odd = Merge(odd_l, odd_r);
+
+  std::vector<ValType> res;
+  res.reserve(l.size() + r.size());
+
+  for (size_t i = 0; i < even.size() || i < odd.size(); i++) {
+    if (i < even.size()) {
+      res.push_back(even[i]);
+    }
+    if (i < odd.size()) {
+      res.push_back(odd[i]);
+    }
+  }
+
+  for (size_t i = 1; i + 1 < res.size(); i += 2) {
+    if (res[i] > res[i + 1]) {
+      std::swap(res[i], res[i + 1]);
+    }
+  }
+
+  return res;
+}
+
+void VasilievMShellSortBatcherMergeOMP::SplitEvenOdd(std::vector<ValType> &vec, std::vector<ValType> &even,
+                                                     std::vector<ValType> &odd) {
+  even.reserve(even.size() + (vec.size() / 2) + 1);
+  odd.reserve(odd.size() + (vec.size() / 2));
+
+  for (size_t i = 0; i < vec.size(); i += 2) {
+    even.push_back(vec[i]);
+    if (i + 1 < vec.size()) {
+      odd.push_back(vec[i + 1]);
+    }
+  }
+}
+
+std::vector<ValType> VasilievMShellSortBatcherMergeOMP::Merge(std::vector<ValType> &a, std::vector<ValType> &b) {
+  std::vector<ValType> merged;
+  size_t i = 0;
+  size_t j = 0;
+  while (i < a.size() && j < b.size()) {
+    if (a[i] <= b[j]) {
+      merged.push_back(a[i++]);
+    } else {
+      merged.push_back(b[j++]);
+    }
+  }
+
+  while (i < a.size()) {
+    merged.push_back(a[i++]);
+  }
+  while (j < b.size()) {
+    merged.push_back(b[j++]);
+  }
+
+  return merged;
 }
 
 }  // namespace vasiliev_m_shell_sort_batcher_merge
