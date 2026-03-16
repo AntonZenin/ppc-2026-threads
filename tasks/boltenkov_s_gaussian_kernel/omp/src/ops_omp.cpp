@@ -60,12 +60,12 @@ bool BoltenkovSGaussianKernelOMP::RunImpl() {
     firstprivate(n, m, kernel, shift)
   for (std::size_t i = 1; i <= n; i++) {
     for (std::size_t j = 1; j <= m; j++) {
-      res[i - 1][j - 1] = (tmp_data[i - 1][j - 1] * kernel_[0][0]) + (tmp_data[i - 1][j] * kernel_[0][1]) +
-                          (tmp_data[i - 1][j + 1] * kernel_[0][2]) + (tmp_data[i][j - 1] * kernel_[1][0]) +
-                          (tmp_data[i][j] * kernel_[1][1]) + (tmp_data[i][j + 1] * kernel_[1][2]) +
-                          (tmp_data[i + 1][j - 1] * kernel_[2][0]) + (tmp_data[i + 1][j] * kernel_[2][1]) +
-                          (tmp_data[i + 1][j + 1] * kernel_[2][2]);
-      res[i - 1][j - 1] >>= shift_;
+      res[i - 1][j - 1] = (tmp_data[i - 1][j - 1] * kernel[0][0]) + (tmp_data[i - 1][j] * kernel[0][1]) +
+                          (tmp_data[i - 1][j + 1] * kernel[0][2]) + (tmp_data[i][j - 1] * kernel[1][0]) +
+                          (tmp_data[i][j] * kernel[1][1]) + (tmp_data[i][j + 1] * kernel[1][2]) +
+                          (tmp_data[i + 1][j - 1] * kernel[2][0]) + (tmp_data[i + 1][j] * kernel[2][1]) +
+                          (tmp_data[i + 1][j + 1] * kernel[2][2]);
+      res[i - 1][j - 1] >>= shift;
     }
   }
 
