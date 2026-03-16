@@ -1,34 +1,42 @@
-#include "zavyalov_a_complex_sparse_matrix_mult/common/include/common.hpp"
 #include "zavyalov_a_complex_sparse_matrix_mult/omp/include/ops_omp.hpp"
 
-#include <atomic>
-#include <numeric>
+#include <omp.h>
+
 #include <vector>
 
 #include "util/include/util.hpp"
+#include "zavyalov_a_complex_sparse_matrix_mult/common/include/common.hpp"
 
 namespace zavyalov_a_compl_sparse_matr_mult {
 
-SparseMatrix ZavyalovAComplSparseMatrMultOMP::multiplicate_with_omp(const SparseMatrix &matr_a, const SparseMatrix &matr_b) {
+SparseMatrix ZavyalovAComplSparseMatrMultOMP::multiplicate_with_omp(const SparseMatrix &matr_a,
+                                                                    const SparseMatrix &matr_b) {
   if (matr_a.width != matr_b.height) {
     throw std::invalid_argument("Incompatible matrix dimensions for multiplication");
   }
 
-  std::map<std::pair<size_t, size_t>, Complex> mp;  // <row, col> -> val
+  int num_threads = ppc::util::GetNumThreads();
 
+  std::vector<std::map<std::pair<size_t, size_t>, Complex>> local_maps(num_threads);
+
+#pragma omp parallel for num_threads(num_threads) schedule(static)
   for (size_t i = 0; i < matr_a.Count(); ++i) {
+    int tid = omp_get_thread_num();
     size_t row_a = matr_a.row_ind[i];
     size_t col_a = matr_a.col_ind[i];
     Complex val_a = matr_a.val[i];
 
     for (size_t j = 0; j < matr_b.Count(); ++j) {
-      size_t row_b = matr_b.row_ind[j];
-      size_t col_b = matr_b.col_ind[j];
-      Complex val_b = matr_b.val[j];
-
-      if (col_a == row_b) {
-        mp[{row_a, col_b}] += val_a * val_b;
+      if (col_a == matr_b.row_ind[j]) {
+        local_maps[tid][{row_a, matr_b.col_ind[j]}] += val_a * matr_b.val[j];
       }
+    }
+  }
+
+  std::map<std::pair<size_t, size_t>, Complex> mp;
+  for (auto &lm : local_maps) {
+    for (auto &[key, value] : lm) {
+      mp[key] += value;
     }
   }
 
@@ -62,7 +70,6 @@ bool ZavyalovAComplSparseMatrMultOMP::PreProcessingImpl() {
 bool ZavyalovAComplSparseMatrMultOMP::RunImpl() {
   const auto &matr_a = std::get<0>(GetInput());
   const auto &matr_b = std::get<1>(GetInput());
-
 
   GetOutput() = multiplicate_with_omp(matr_a, matr_b);
 
