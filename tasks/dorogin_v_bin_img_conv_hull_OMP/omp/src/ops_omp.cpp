@@ -94,9 +94,9 @@ ComponentHull BuildHull(ComponentHull pts) {
     }
     return a.y < b.y;
   });
-  pts.erase(std::unique(pts.begin(), pts.end(),
-                        [](const Point &a, const Point &b) { return (a.x == b.x) && (a.y == b.y); }),
-            pts.end());
+  pts.erase(
+      std::unique(pts.begin(), pts.end(), [](const Point &a, const Point &b) { return (a.x == b.x) && (a.y == b.y); }),
+      pts.end());
 
   if (pts.size() <= 1) {
     return pts;
@@ -105,8 +105,7 @@ ComponentHull BuildHull(ComponentHull pts) {
   ComponentHull lower;
   lower.reserve(pts.size());
   for (const auto &p : pts) {
-    while (lower.size() >= 2 &&
-           Cross(lower[lower.size() - 2], lower[lower.size() - 1], p) <= 0) {
+    while (lower.size() >= 2 && Cross(lower[lower.size() - 2], lower[lower.size() - 1], p) <= 0) {
       lower.pop_back();
     }
     lower.push_back(p);
@@ -116,8 +115,7 @@ ComponentHull BuildHull(ComponentHull pts) {
   upper.reserve(pts.size());
   for (std::size_t i = pts.size(); i-- > 0;) {
     const Point &p = pts[i];
-    while (upper.size() >= 2 &&
-           Cross(upper[upper.size() - 2], upper[upper.size() - 1], p) <= 0) {
+    while (upper.size() >= 2 && Cross(upper[upper.size() - 2], upper[upper.size() - 1], p) <= 0) {
       upper.pop_back();
     }
     upper.push_back(p);
@@ -147,8 +145,7 @@ bool DoroginVBinImgConvHullOMP::ValidationImpl() {
   if (img.width <= 0 || img.height <= 0) {
     return false;
   }
-  const std::size_t required =
-      static_cast<std::size_t>(img.width) * static_cast<std::size_t>(img.height);
+  const std::size_t required = static_cast<std::size_t>(img.width) * static_cast<std::size_t>(img.height);
   return img.data.size() == required;
 }
 
@@ -178,6 +175,8 @@ bool DoroginVBinImgConvHullOMP::RunImpl() {
   return true;
 }
 
-bool DoroginVBinImgConvHullOMP::PostProcessingImpl() { return true; }
+bool DoroginVBinImgConvHullOMP::PostProcessingImpl() {
+  return true;
+}
 
 }  // namespace dorogin_v_bin_img_conv_hull_omp

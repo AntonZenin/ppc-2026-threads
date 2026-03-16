@@ -22,8 +22,7 @@ BinaryImage MakeCheckerboard(int w, int h, int block) {
   for (int y = 0; y < h; ++y) {
     for (int x = 0; x < w; ++x) {
       const bool on = ((x / block) % 2 == 0) && ((y / block) % 2 == 0);
-      img.data[static_cast<std::size_t>(y) * static_cast<std::size_t>(w) +
-               static_cast<std::size_t>(x)] = on ? 1U : 0U;
+      img.data[static_cast<std::size_t>(y) * static_cast<std::size_t>(w) + static_cast<std::size_t>(x)] = on ? 1U : 0U;
     }
   }
 
@@ -35,22 +34,27 @@ BinaryImage MakeCheckerboard(int w, int h, int block) {
 class DoroginVRunPerfTestsOMP : public ppc::util::BaseRunPerfTests<InType, OutType> {
   InType input_data_{};
 
-  void SetUp() override { input_data_ = MakeCheckerboard(512, 512, 8); }
+  void SetUp() override {
+    input_data_ = MakeCheckerboard(512, 512, 8);
+  }
 
   bool CheckTestOutputData(OutType &output_data) final {
     return !output_data.empty() || output_data.empty();
   }
 
-  InType GetTestInputData() final { return input_data_; }
+  InType GetTestInputData() final {
+    return input_data_;
+  }
 };
 
-TEST_P(DoroginVRunPerfTestsOMP, RunPerfOMP) { ExecuteTest(GetParam()); }
+TEST_P(DoroginVRunPerfTestsOMP, RunPerfOMP) {
+  ExecuteTest(GetParam());
+}
 
 namespace {
 
 const auto kAllPerfTasks =
-    ppc::util::MakeAllPerfTasks<InType, DoroginVBinImgConvHullOMP>(
-        PPC_SETTINGS_dorogin_v_bin_img_conv_hull_OMP);
+    ppc::util::MakeAllPerfTasks<InType, DoroginVBinImgConvHullOMP>(PPC_SETTINGS_dorogin_v_bin_img_conv_hull_OMP);
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 
