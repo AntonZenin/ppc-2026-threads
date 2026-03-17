@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <stb/stb_image.h>
 
 #include <array>
 #include <cstddef>
@@ -9,6 +8,7 @@
 #include <vector>
 
 #include "romanov_a_gauss_block/common/include/common.hpp"
+#include "romanov_a_gauss_block/omp/include/ops_omp.hpp"
 #include "romanov_a_gauss_block/seq/include/ops_seq.hpp"
 #include "util/include/func_test_util.hpp"
 #include "util/include/util.hpp"
@@ -66,7 +66,8 @@ const std::array<TestType, 7> kTestParam = {
                     std::vector<uint8_t>{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, "Test7")};
 
 const auto kTestTasksList =
-    std::tuple_cat(ppc::util::AddFuncTask<RomanovAGaussBlockSEQ, InType>(kTestParam, PPC_SETTINGS_example_threads));
+    std::tuple_cat(ppc::util::AddFuncTask<RomanovAGaussBlockOMP, InType>(kTestParam, PPC_SETTINGS_example_threads),
+                   ppc::util::AddFuncTask<RomanovAGaussBlockSEQ, InType>(kTestParam, PPC_SETTINGS_example_threads));
 
 const auto kGtestValues = ppc::util::ExpandToValues(kTestTasksList);
 
