@@ -134,12 +134,20 @@ bool ZeninARadixSortDoubleBatcherMergeOMP::RunImpl() {
   }
 
   size_t original_size = data.size();
+
+  if (original_size < 1000) {
+    LSDRadixSort(data);
+    auto &output = GetOutput();
+    output = data;
+    return true;
+  }
+
   int num_threads = ppc::util::GetNumThreads();
   if (num_threads <= 0) {
     num_threads = 1;
   }
 
-  if (num_threads == 1 || static_cast<int>(original_size) < num_threads * 100) {
+  if (num_threads == 1) {
     LSDRadixSort(data);
     auto &output = GetOutput();
     output = data;
