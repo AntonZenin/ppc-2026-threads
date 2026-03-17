@@ -129,17 +129,23 @@ bool ZeninARadixSortDoubleBatcherMergeOMP::RunImpl() {
     return true;
   }
   size_t original_size = data.size();
+  int num_threads = ppc::util::GetNumThreads();
+
+  if (static_cast<int>(original_size) < num_threads * 100) {
+    num_threads = 1;
+  }
+
+  if (num_threads == 1) {
+    LSDRadixSort(data);
+    GetOutput() = data;
+    return true;
+  }
 
   size_t pow2 = 1;
   while (pow2 < original_size) {
     pow2 *= 2;
   }
   data.resize(pow2, std::numeric_limits<double>::max());
-
-  int num_threads = ppc::util::GetNumThreads();
-  if (num_threads <= 0) {
-    num_threads = 1;
-  }
 
   size_t num_chunks = 1;
   while (num_chunks * 2 <= static_cast<size_t>(num_threads) && num_chunks * 2 <= pow2) {
@@ -166,7 +172,7 @@ bool ZeninARadixSortDoubleBatcherMergeOMP::RunImpl() {
     for (int i = 0; i < merges_count; ++i) {
       size_t lo = static_cast<size_t>(i) * (2 * size);
       std::vector<double> block(raw_data + lo, raw_data + lo + (2 * size));
-      BatcherOddEvenMerge(block, (2 * size));
+      BatcherOddEvenMerge(block, 2 * size);
       for (size_t j = 0; j < (2 * size); ++j) {
         raw_data[lo + j] = block[j];
       }
