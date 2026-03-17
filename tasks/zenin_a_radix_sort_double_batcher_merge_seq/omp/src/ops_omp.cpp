@@ -167,13 +167,29 @@ bool ZeninARadixSortDoubleBatcherMergeOMP::RunImpl() {
 
   size_t chunk_size = pow2 / num_chunks;
 
+  // Получаем указатель на данные для прямого доступа
+  double *data_ptr = data.data();
+
 // Фаза 1: Сортировка чанков
 #pragma omp parallel for num_threads(num_threads) schedule(static)
   for (int i = 0; i < static_cast<int>(num_chunks); ++i) {
     size_t start = static_cast<size_t>(i) * chunk_size;
-    std::vector<double> chunk(data.begin() + start, data.begin() + start + chunk_size);
+
+    // Создаем временный вектор на стеке (не в куче)
+    std::vector<double> chunk(chunk_size);
+
+    // Копируем данные в чанк
+    for (size_t j = 0; j < chunk_size; ++j) {
+      chunk[j] = data_ptr[start + j];
+    }
+
+    // Сортируем чанк
     LSDRadixSort(chunk);
-    std::copy(chunk.begin(), chunk.end(), data.begin() + start);
+
+    // Копируем обратно
+    for (size_t j = 0; j < chunk_size; ++j) {
+      data_ptr[start + j] = chunk[j];
+    }
   }
 
   // Фаза 2: Слияние
@@ -183,9 +199,22 @@ bool ZeninARadixSortDoubleBatcherMergeOMP::RunImpl() {
 #pragma omp parallel for num_threads(num_threads) schedule(static)
     for (int i = 0; i < merges_count; ++i) {
       size_t lo = static_cast<size_t>(i) * (2 * size);
-      std::vector<double> block(data.begin() + lo, data.begin() + lo + (2 * size));
+
+      // Создаем временный вектор для блока слияния
+      std::vector<double> block(2 * size);
+
+      // Копируем данные в блок
+      for (size_t j = 0; j < 2 * size; ++j) {
+        block[j] = data_ptr[lo + j];
+      }
+
+      // Сливаем блок
       BatcherOddEvenMerge(block, 2 * size);
-      std::copy(block.begin(), block.end(), data.begin() + lo);
+
+      // Копируем обратно
+      for (size_t j = 0; j < 2 * size; ++j) {
+        data_ptr[lo + j] = block[j];
+      }
     }
   }
 
