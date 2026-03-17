@@ -128,14 +128,15 @@ bool ZeninARadixSortDoubleBatcherMergeOMP::RunImpl() {
     GetOutput() = data;
     return true;
   }
+
   size_t original_size = data.size();
   int num_threads = ppc::util::GetNumThreads();
-
-  if (static_cast<int>(original_size) < num_threads * 100) {
+  if (num_threads <= 0) {
     num_threads = 1;
   }
 
-  if (num_threads == 1) {
+  // Для маленьких массивов и одного потока — просто последовательная сортировка
+  if (num_threads == 1 || static_cast<int>(original_size) < num_threads * 100) {
     LSDRadixSort(data);
     GetOutput() = data;
     return true;
