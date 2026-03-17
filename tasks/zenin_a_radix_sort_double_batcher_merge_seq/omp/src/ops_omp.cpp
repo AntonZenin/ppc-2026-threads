@@ -128,26 +128,21 @@ void ZeninARadixSortDoubleBatcherMergeOMP::LSDRadixSort(std::vector<double> &arr
 bool ZeninARadixSortDoubleBatcherMergeOMP::RunImpl() {
   auto data = GetInput();
   if (data.empty()) {
-    GetOutput() = data;
+    auto &output = GetOutput();
+    output = data;
     return true;
   }
 
   size_t original_size = data.size();
-
-  if (original_size < 200) {
-    LSDRadixSort(data);
-    GetOutput() = data;
-    return true;
-  }
-
   int num_threads = ppc::util::GetNumThreads();
   if (num_threads <= 0) {
     num_threads = 1;
   }
 
-  if (num_threads == 1) {
+  if (num_threads == 1 || static_cast<int>(original_size) < num_threads * 100) {
     LSDRadixSort(data);
-    GetOutput() = data;
+    auto &output = GetOutput();
+    output = data;
     return true;
   }
 
@@ -166,7 +161,6 @@ bool ZeninARadixSortDoubleBatcherMergeOMP::RunImpl() {
   int num_chunks_int = static_cast<int>(num_chunks);
   double *raw_data = data.data();
 
-  // Параллельная сортировка чанков
 #pragma omp parallel for num_threads(num_threads) default(none) shared(chunk_size, raw_data, num_chunks_int)
   for (int i = 0; i < num_chunks_int; ++i) {
     size_t start = static_cast<size_t>(i) * chunk_size;
@@ -177,9 +171,9 @@ bool ZeninARadixSortDoubleBatcherMergeOMP::RunImpl() {
     }
   }
 
-  // Последовательное слияние через Бэтчера
   for (size_t size = chunk_size; size < pow2; size *= 2) {
     int merges_count = static_cast<int>(pow2 / (size * 2));
+#pragma omp parallel for num_threads(num_threads) default(none) shared(size, raw_data, merges_count)
     for (int i = 0; i < merges_count; ++i) {
       size_t lo = static_cast<size_t>(i) * (2 * size);
       std::vector<double> block(raw_data + lo, raw_data + lo + (2 * size));
@@ -191,7 +185,8 @@ bool ZeninARadixSortDoubleBatcherMergeOMP::RunImpl() {
   }
 
   data.resize(original_size);
-  GetOutput() = data;
+  auto &output = GetOutput();
+  output = data;
   return true;
 }
 
