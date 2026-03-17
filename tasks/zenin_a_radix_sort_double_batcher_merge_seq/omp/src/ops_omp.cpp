@@ -134,7 +134,6 @@ bool ZeninARadixSortDoubleBatcherMergeOMP::RunImpl() {
 
   size_t original_size = data.size();
 
-  // Для маленьких массивов не используем OpenMP
   if (original_size < 200) {
     LSDRadixSort(data);
     GetOutput() = data;
@@ -152,76 +151,47 @@ bool ZeninARadixSortDoubleBatcherMergeOMP::RunImpl() {
     return true;
   }
 
-  // Дополняем до степени двойки
   size_t pow2 = 1;
   while (pow2 < original_size) {
     pow2 *= 2;
   }
   data.resize(pow2, std::numeric_limits<double>::max());
 
-  // Определяем количество чанков
   size_t num_chunks = 1;
   while (num_chunks * 2 <= static_cast<size_t>(num_threads) && num_chunks * 2 <= pow2) {
     num_chunks *= 2;
   }
 
   size_t chunk_size = pow2 / num_chunks;
+  int num_chunks_int = static_cast<int>(num_chunks);
+  double *raw_data = data.data();
 
-  // Получаем указатель на данные для прямого доступа
-  double *data_ptr = data.data();
-
-// Фаза 1: Сортировка чанков
-#pragma omp parallel for num_threads(num_threads) schedule(static)
-  for (int i = 0; i < static_cast<int>(num_chunks); ++i) {
+  // Параллельная сортировка чанков
+#pragma omp parallel for num_threads(num_threads) default(none) shared(chunk_size, raw_data, num_chunks_int)
+  for (int i = 0; i < num_chunks_int; ++i) {
     size_t start = static_cast<size_t>(i) * chunk_size;
-
-    // Создаем временный вектор на стеке (не в куче)
-    std::vector<double> chunk(chunk_size);
-
-    // Копируем данные в чанк
-    for (size_t j = 0; j < chunk_size; ++j) {
-      chunk[j] = data_ptr[start + j];
-    }
-
-    // Сортируем чанк
+    std::vector<double> chunk(raw_data + start, raw_data + start + chunk_size);
     LSDRadixSort(chunk);
-
-    // Копируем обратно
     for (size_t j = 0; j < chunk_size; ++j) {
-      data_ptr[start + j] = chunk[j];
+      raw_data[start + j] = chunk[j];
     }
   }
 
-  // Фаза 2: Слияние
+  // Последовательное слияние через Бэтчера
   for (size_t size = chunk_size; size < pow2; size *= 2) {
     int merges_count = static_cast<int>(pow2 / (size * 2));
-
-#pragma omp parallel for num_threads(num_threads) schedule(static)
     for (int i = 0; i < merges_count; ++i) {
       size_t lo = static_cast<size_t>(i) * (2 * size);
-
-      // Создаем временный вектор для блока слияния
-      std::vector<double> block(2 * size);
-
-      // Копируем данные в блок
-      for (size_t j = 0; j < 2 * size; ++j) {
-        block[j] = data_ptr[lo + j];
-      }
-
-      // Сливаем блок
+      std::vector<double> block(raw_data + lo, raw_data + lo + (2 * size));
       BatcherOddEvenMerge(block, 2 * size);
-
-      // Копируем обратно
-      for (size_t j = 0; j < 2 * size; ++j) {
-        data_ptr[lo + j] = block[j];
+      for (size_t j = 0; j < (2 * size); ++j) {
+        raw_data[lo + j] = block[j];
       }
     }
   }
 
-  // Возвращаем исходный размер
   data.resize(original_size);
   GetOutput() = data;
-
   return true;
 }
 
