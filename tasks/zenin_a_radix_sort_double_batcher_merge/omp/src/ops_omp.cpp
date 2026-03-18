@@ -1,5 +1,6 @@
 #include "zenin_a_radix_sort_double_batcher_merge/omp/include/ops_omp.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -7,7 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include "util/include/util.hpp"
 #include "zenin_a_radix_sort_double_batcher_merge/common/include/common.hpp"
 
 namespace zenin_a_radix_sort_double_batcher_merge {
@@ -26,22 +26,24 @@ bool ZeninARadixSortDoubleBatcherMergeOMP::PreProcessingImpl() {
   return true;
 }
 
+void ZeninARadixSortDoubleBatcherMergeOMP::BlocksComparing(std::vector<double> &arr, size_t i, size_t j) {
+  if (arr[i] > arr[j]) {
+    std::swap(arr[i], arr[j]);
+  }
+}
+
 void ZeninARadixSortDoubleBatcherMergeOMP::BatcherOddEvenMerge(std::vector<double> &arr, size_t n) {
   for (size_t po = n / 2; po > 0; po >>= 1) {
     if (po == n / 2) {
 #pragma omp parallel for shared(arr, po) default(none)
       for (size_t i = 0; i < po; ++i) {
-        if (arr[i] > arr[i + po]) {
-          std::swap(arr[i], arr[i + po]);
-        }
+        BlocksComparing(arr, i, i + po);
       }
     } else {
 #pragma omp parallel for shared(arr, n, po) default(none)
       for (size_t i = po; i < n - po; i += 2 * po) {
         for (size_t j = 0; j < po; ++j) {
-          if (arr[i + j] > arr[i + j + po]) {
-            std::swap(arr[i + j], arr[i + j + po]);
-          }
+          BlocksComparing(arr, i + j, i + j + po);
         }
       }
     }

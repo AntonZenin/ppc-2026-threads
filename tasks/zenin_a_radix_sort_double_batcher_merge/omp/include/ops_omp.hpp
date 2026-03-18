@@ -22,6 +22,7 @@ class ZeninARadixSortDoubleBatcherMergeOMP : public BaseTask {
   bool RunImpl() override;
   bool PostProcessingImpl() override;
 
+  static void BlocksComparing(std::vector<double> &arr, size_t i, size_t j);
   static uint64_t PackDouble(double v) noexcept;
   static double UnpackDouble(uint64_t k) noexcept;
   static void LSDRadixSort(std::vector<double> &arr);
