@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 #include "kutuzov_i_convex_hull_jarvis/common/include/common.hpp"
 #include "task/include/task.hpp"
 
