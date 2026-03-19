@@ -6,8 +6,6 @@
 #include <string>
 #include <tuple>
 
-#include <iostream>
-
 #include "kutuzov_i_convex_hull_jarvis/common/include/common.hpp"
 #include "kutuzov_i_convex_hull_jarvis/seq/include/ops_seq.hpp"
 #include "kutuzov_i_convex_hull_jarvis/omp/include/ops_omp.hpp"
@@ -30,12 +28,6 @@ class KutuzovIRunFuncTestsThreads : public ppc::util::BaseRunFuncTests<InType, O
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
-
-    if (output_data != expected_output_) {
-      for (long unsigned int i = 0; i < output_data.size(); i++)
-        std::cout << std::get<0>(output_data[i]) << ", " << std::get<1>(output_data[i]) << "  expected:  " << std::get<0>(expected_output_[i]) << ", " << std::get<1>(expected_output_[i]) << std::endl;
-    }
-
     return (output_data == expected_output_);
   }
 
