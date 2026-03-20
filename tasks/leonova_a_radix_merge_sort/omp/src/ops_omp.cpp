@@ -136,10 +136,6 @@ bool LeonovaARadixMergeSortOMP::PostProcessingImpl() {
   return true;
 }
 
-uint64_t LeonovaARadixMergeSortOMP::ToUnsigned(int64_t value) {
-  return ToUnsignedValue(value);
-}
-
 void LeonovaARadixMergeSortOMP::RadixSort(std::vector<int64_t> &arr, size_t left, size_t right) {
   const size_t size = right - left;
   if (size <= 1) {
