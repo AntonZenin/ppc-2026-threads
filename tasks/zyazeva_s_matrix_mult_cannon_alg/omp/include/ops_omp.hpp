@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "task/include/task.hpp"
 #include "zyazeva_s_matrix_mult_cannon_alg/common/include/common.hpp"
 
