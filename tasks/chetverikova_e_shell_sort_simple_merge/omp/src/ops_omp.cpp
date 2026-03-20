@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <vector>
+#include <ranges>
 
 #include "chetverikova_e_shell_sort_simple_merge/common/include/common.hpp"
 
