@@ -1,5 +1,9 @@
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
+#include <vector>
+
 #include "task/include/task.hpp"
 #include "zenin_a_radix_sort_double_batcher_merge/common/include/common.hpp"
 
