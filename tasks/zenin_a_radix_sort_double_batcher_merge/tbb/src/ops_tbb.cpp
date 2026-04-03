@@ -7,8 +7,8 @@
 #include <util/include/util.hpp>
 #include <vector>
 
-#include "zenin_a_radix_sort_double_batcher_merge/common/include/common.hpp"
 #include "oneapi/tbb/parallel_for.h"
+#include "zenin_a_radix_sort_double_batcher_merge/common/include/common.hpp"
 
 namespace zenin_a_radix_sort_double_batcher_merge {
 
@@ -104,25 +104,20 @@ void ZeninARadixSortDoubleBatcherMergeTBB::LSDRadixSort(std::vector<double> &arr
   }
 }
 
-void ZeninARadixSortDoubleBatcherMergeTBB::BatcherOddEvenMerge(
-    std::vector<double> &arr, size_t n) {
+void ZeninARadixSortDoubleBatcherMergeTBB::BatcherOddEvenMerge(std::vector<double> &arr, size_t n) {
   for (size_t po = n / 2; po > 0; po >>= 1) {
     if (po == n / 2) {
-      tbb::parallel_for(tbb::blocked_range<size_t>(0, po),
-        [&](const tbb::blocked_range<size_t> &r) {
-          for (size_t i = r.begin(); i < r.end(); ++i) {
-            BlocksComparing(arr, i, i + po);
-          }
-        });
+      tbb::parallel_for(tbb::blocked_range<size_t>(0, po), [&](const tbb::blocked_range<size_t> &r) {
+        for (size_t i = r.begin(); i < r.end(); ++i) {
+          BlocksComparing(arr, i, i + po);
+        }
+      });
     } else {
-      tbb::parallel_for(tbb::blocked_range<size_t>(po, n - po, 2 * po),
-        [&](const tbb::blocked_range<size_t> &r) {
-          for (size_t i = r.begin(); i < r.end(); i += 2 * po) {
-            for (size_t j = 0; j < po; ++j) {
-              BlocksComparing(arr, i + j, i + j + po);
-            }
-          }
-        });
+      for (size_t i = po; i < n - po; i += 2 * po) {
+        for (size_t j = 0; j < po; ++j) {
+          BlocksComparing(arr, i + j, i + j + po);
+        }
+      }
     }
   }
 }
@@ -137,7 +132,9 @@ bool ZeninARadixSortDoubleBatcherMergeTBB::RunImpl() {
   }
 
   size_t pow2 = 1;
-  while (pow2 < original_size) pow2 <<= 1;
+  while (pow2 < original_size) {
+    pow2 <<= 1;
+  }
   data.resize(pow2, std::numeric_limits<double>::max());
 
   size_t half = pow2 / 2;
@@ -146,10 +143,7 @@ bool ZeninARadixSortDoubleBatcherMergeTBB::RunImpl() {
   std::vector<double> left(data.begin(), data.begin() + half_dist);
   std::vector<double> right(data.begin() + half_dist, data.end());
 
-  tbb::parallel_invoke(
-    [&]() { LSDRadixSort(left); },
-    [&]() { LSDRadixSort(right); }
-  );
+  tbb::parallel_invoke([&]() { LSDRadixSort(left); }, [&]() { LSDRadixSort(right); });
 
   std::ranges::copy(left, data.begin());
   std::ranges::copy(right, data.begin() + half_dist);
