@@ -1,6 +1,5 @@
 #include "akimov_i_radixsort_int_merge/tbb/include/ops_tbb.hpp"
 
-#include <oneapi/tbb/blocked_range.h>
 #include <oneapi/tbb/parallel_for.h>
 #include <tbb/tbb.h>
 
@@ -101,6 +100,7 @@ bool AkimovIRadixSortIntMergeTBB::RunImpl() {
     return true;
   }
 
+  // Разбиваем массив на блоки
   std::vector<int> offsets(num_threads + 1);
   int chunk = n / num_threads;
   int rem = n % num_threads;
@@ -111,24 +111,22 @@ bool AkimovIRadixSortIntMergeTBB::RunImpl() {
   }
   offsets[num_threads] = n;
 
-  tbb::parallel_for(tbb::blocked_range<int>(0, num_threads), [&](const tbb::blocked_range<int> &range) {
-    for (int i = range.begin(); i != range.end(); ++i) {
-      auto begin = arr.begin() + offsets[i];
-      auto end = arr.begin() + offsets[i + 1];
-      RadixSortLocal(begin, end);
-    }
+  // Параллельная сортировка блоков
+  tbb::parallel_for(0, num_threads, [&](int i) {
+    auto begin = arr.begin() + offsets[i];
+    auto end = arr.begin() + offsets[i + 1];
+    RadixSortLocal(begin, end);
   });
 
+  // Слияние блоков
   for (int step = 1; step < num_threads; step *= 2) {
-    tbb::parallel_for(tbb::blocked_range<int>(0, num_threads, 1), [&](const tbb::blocked_range<int> &range) {
-      for (int i = range.begin(); i < range.end(); i += 2 * step) {
-        if (i + step < num_threads) {
-          auto begin = arr.begin() + offsets[i];
-          auto middle = arr.begin() + offsets[i + step];
-          int end_idx = std::min(i + (2 * step), num_threads);
-          auto end = arr.begin() + offsets[end_idx];
-          std::inplace_merge(begin, middle, end);
-        }
+    tbb::parallel_for(0, num_threads, [&](int i) {
+      if (i % (2 * step) == 0 && i + step < num_threads) {
+        auto begin = arr.begin() + offsets[i];
+        auto middle = arr.begin() + offsets[i + step];
+        int end_idx = std::min(i + (2 * step), num_threads);
+        auto end = arr.begin() + offsets[end_idx];
+        std::inplace_merge(begin, middle, end);
       }
     });
   }
