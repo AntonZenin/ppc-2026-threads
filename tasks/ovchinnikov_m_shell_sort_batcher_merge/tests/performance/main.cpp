@@ -4,6 +4,7 @@
 #include <cstddef>
 
 #include "ovchinnikov_m_shell_sort_batcher_merge/common/include/common.hpp"
+#include "ovchinnikov_m_shell_sort_batcher_merge/omp/include/ops_omp.hpp"
 #include "ovchinnikov_m_shell_sort_batcher_merge/seq/include/ops_seq.hpp"
 #include "util/include/perf_test_util.hpp"
 
@@ -12,7 +13,7 @@ namespace ovchinnikov_m_shell_sort_batcher_merge {
 class OvchinnikovMRunPerfTestsThreads : public ppc::util::BaseRunPerfTests<InType, OutType> {
  protected:
   void SetUp() override {
-    constexpr std::size_t kSize = 100000;
+    constexpr std::size_t kSize = 5000000;
     input_data_.resize(kSize);
     for (std::size_t i = 0; i < kSize; ++i) {
       input_data_[i] = static_cast<int>(kSize - i);
